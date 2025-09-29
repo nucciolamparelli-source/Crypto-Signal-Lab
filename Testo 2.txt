@@ -1,0 +1,7 @@
+streamlit
+ccxt
+pandas
+vectorbt
+openai
+google-genai
+plotly

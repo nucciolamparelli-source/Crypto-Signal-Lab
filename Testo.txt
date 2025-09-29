@@ -1,0 +1,72 @@
+# app.py
+import streamlit as st
+import pandas as pd
+import ccxt
+import vectorbt as vbt
+import openai
+from google import genai
+
+# API key come Secrets
+openai.api_key = st.secrets.get("OPENAI_API_KEY", "")
+gemini_api_key = st.secrets.get("GEMINI_API_KEY", "")
+if gemini_api_key:
+    gemini_client = genai.Client(api_key=gemini_api_key)
+else:
+    gemini_client = None
+
+# Funzioni per dati, backtest, AI
+def fetch_data(symbol="BTC/USD", timeframe="1h", limit=200):
+    exchange = ccxt.gemini()
+    ohlcv = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+    df = pd.DataFrame(ohlcv, columns=["timestamp","open","high","low","close","volume"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+    df = df.set_index("timestamp")
+    return df
+
+def run_backtest(df):
+    close = df["close"]
+    fast = vbt.MA.run(close, window=10)
+    slow = vbt.MA.run(close, window=50)
+    entries = fast.ma_above(slow)
+    exits = fast.ma_below(slow)
+    pf = vbt.Portfolio.from_signals(close, entries, exits, init_cash=10000, fees=0.001)
+    return pf
+
+def ai_signal(prices, provider="openai"):
+    prompt = f"Prezzi ultimi 5 periodi: {prices}. Decidi BUY/SELL/HOLD."
+    if provider=="openai" and openai.api_key:
+        resp = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=[{"role":"user","content":prompt}],
+            max_tokens=20,
+            temperature=0.0
+        )
+        return resp["choices"][0]["message"]["content"]
+    elif provider=="gemini" and gemini_client:
+        resp = gemini_client.create_text(model="gemini-1.5-flash", input=prompt, max_output_tokens=40)
+        return resp.output[0].content[0].text
+    else:
+        return "⚠️ Nessuna API key configurata"
+
+# Streamlit UI
+st.title("Crypto Signal Lab")
+symbol = st.text_input("Coppia", value="BTC/USD")
+timeframe = st.selectbox("Timeframe", ["1h","4h","1d"])
+limit = st.slider("Numero candele",50,1000,200,50)
+
+if st.button("Esegui Backtest"):
+    df = fetch_data(symbol, timeframe, limit)
+    pf = run_backtest(df)
+    st.subheader("Grafico Prezzi")
+    st.line_chart(df["close"])
+    st.subheader("Equity Curve")
+    st.plotly_chart(pf.plot())
+    st.subheader("Risultati Backtest")
+    st.write("Rendimento Totale:", round(pf.total_return()*100,2), "%")
+    st.write("Sharpe Ratio:", round(pf.sharpe_ratio(),2))
+    recent = df["close"].tail(5).tolist()
+    col1,col2 = st.columns(2)
+    with col1:
+        st.write("🤖 ChatGPT:", ai_signal(recent,"openai"))
+    with col2:
+        st.write("🌐 Gemini:", ai_signal(recent,"gemini"))
