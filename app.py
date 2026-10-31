@@ -92,6 +92,6 @@ if analyze_button:
                 st.write(risultato_ia)
                 
             except Exception as e:
-                st.error(f❌ Errore durante la generazione della risposta: {e}")
+                st.error(f"❌ Errore durante la generazione della risposta: {e}")
 else:
     st.info("👈 Configura le chiavi, seleziona l'asset e clicca su **Genera Analisi e Segnale** dalla barra laterale.")
