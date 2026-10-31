@@ -2,7 +2,6 @@ import os
 import streamlit as st
 import requests
 
-# Configurazione della pagina Streamlit
 st.set_page_config(
     page_title="Crypto Signal Lab",
     page_icon="📈",
@@ -10,26 +9,25 @@ st.set_page_config(
 )
 
 st.title("🚀 Crypto Signal Lab - AI Trading Dashboard")
-st.markdown("Dashboard interattiva per l'analisi e la generazione di segnali crypto tramite **Gemini** e **Groq**.")
+st.markdown("Dashboard avanzata per l'analisi e la generazione di segnali crypto tramite **Gemini**.")
 
-# Sidebar per la configurazione delle API e dei parametri
-st.sidebar.header("⚙️ Configurazione")
+# Sidebar per configurazione e personalizzazione
+st.sidebar.header("⚙️ Configurazione & Parametri")
 
-# Recupera le chiavi dalle variabili d'ambiente (impostate su Render) o dai campi di input
-gemini_key = os.getenv("GEMINI_API_KEY")
-if not gemini_key:
-    gemini_key = st.sidebar.text_input("Gemini API Key", type="password")
+gemini_key = os.getenv("GEMINI_API_KEY") or st.sidebar.text_input("Gemini API Key", type="password")
 
-groq_key = os.getenv("GROQ_API_KEY") or st.sidebar.text_input("Groq API Key", type="password")
+# Selezione estesa di criptovalute
+crypto_options = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "DOGEUSDT", "AVAXUSDT"]
+crypto_symbol = st.sidebar.selectbox("Seleziona Crypto", crypto_options)
 
-# Selezione della criptovaluta e del modello
-crypto_symbol = st.sidebar.selectbox("Seleziona Crypto", ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"])
-ai_provider = st.sidebar.radio("Seleziona Intelligenza Artificiale", ["Google Gemini", "Groq"])
+# Parametri di analisi personalizzabili
+trading_style = st.sidebar.selectbox("Stile di Trading", ["Day Trading (Breve termine)", "Swing Trading (Medio termine)", "HODL / Investimento (Lungo termine)"])
+risk_level = st.sidebar.selectbox("Profilo di Rischio", ["Conservativo", "Bilanciato", "Aggressivo"])
 
 st.sidebar.markdown("---")
-analyze_button = st.sidebar.button("Genera Analisi e Segnale")
+analyze_button = st.sidebar.button("Genera Analisi Avanzata")
 
-# Funzione per recuperare il prezzo attuale da Binance (pubblico, senza API key)
+# Funzione per recuperare il prezzo da Binance
 def get_crypto_price(symbol):
     try:
         url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
@@ -41,7 +39,7 @@ def get_crypto_price(symbol):
 
 current_price = get_crypto_price(crypto_symbol)
 
-# Area Principale della Dashboard
+# Layout principale
 col1, col2 = st.columns(2)
 
 with col1:
@@ -52,50 +50,36 @@ with col1:
         st.warning("Impossibile recuperare il prezzo in tempo reale.")
 
 with col2:
-    st.subheader("ℹ️ Stato del Servizio")
-    st.success("🟢 Sistema Online e Operativo su Render")
+    st.subheader("⚙️ Parametri Selezionati")
+    st.info(f"**Stile:** {trading_style} \n\n **Rischio:** {risk_level}")
 
 st.markdown("---")
 
-# Sezione di analisi IA
 if analyze_button:
-    if ai_provider == "Google Gemini" and not gemini_key:
-        st.error("⚠️ Inserisci la chiave API di Gemini per procedere.")
-    elif ai_provider == "Groq" and not groq_key:
-        st.error("⚠️ Inserisci la chiave API di Groq per procedere.")
+    if not gemini_key:
+        st.error("⚠️ Inserisci la chiave API di Gemini nella barra laterale per procedere.")
     else:
-        with st.spinner(f"Analisi di mercato in corso con {ai_provider}..."):
-            prompt_testo = f"Analizza la criptovaluta {crypto_symbol} che quota attualmente ${current_price}. Fornisci un'indicazione sintetica di trading (BUY, SELL o HOLD) con motivazione tecnica."
+        with st.spinner(f"Analisi di {crypto_symbol} in corso con Gemini..."):
+            prompt_testo = (
+                f"Agisci come un analista finanziario esperto in criptovalute. "
+                f"Analizza la criptovaluta {crypto_symbol} che quota attualmente ${current_price}. "
+                f"Il trader adotta uno stile di {trading_style} con un profilo di rischio {risk_level}. "
+                f"Fornisci un'indicazione chiara (BUY, SELL o HOLD), i livelli chiave di supporto/resistenza stimati "
+                f"e una motivazione tecnica dettagliata."
+            )
             
             try:
-                if ai_provider == "Google Gemini":
-                    # Utilizzo della libreria google-genai
-                    from google import genai
-                    client = genai.Client(api_key=gemini_key)
-                    response = client.models.generate_content(
-                       model='gemini-3.8-flash',
-
-                        contents=prompt_testo,
-                    )
-                    risultato_ia = response.text
-                else:
-                    # Utilizzo delle API di Groq via requests
-                    headers = {
-                        "Authorization": f"Bearer {groq_key}",
-                        "Content-Type": "application/json"
-                    }
-                    payload = {
-                        "model": "llama-3.3-70b-versatile",
-                        "messages": [{"role": "user", "content": prompt_testo}]
-                    }
-                    response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=10)
-                    res_json = response.json()
-                    risultato_ia = res_json['choices'][0]['message']['content']
-
+                from google import genai
+                client = genai.Client(api_key=gemini_key)
+                response = client.models.generate_content(
+                    model='gemini-3.8-flash',
+                    contents=prompt_testo,
+                )
+                
                 st.subheader("🤖 Risultato Analisi IA")
-                st.write(risultato_ia)
+                st.write(response.text)
                 
             except Exception as e:
                 st.error(f"❌ Errore durante la generazione della risposta: {e}")
 else:
-    st.info("👈 Configura le chiavi, seleziona l'asset e clicca su **Genera Analisi e Segnale** dalla barra laterale.")
+    st.info("👈 Seleziona la crypto e i parametri dalla barra laterale, quindi clicca su **Genera Analisi Avanzata**.")
