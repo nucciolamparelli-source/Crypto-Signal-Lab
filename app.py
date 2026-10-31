@@ -70,7 +70,8 @@ if analyze_button:
                     from google import genai
                     client = genai.Client(api_key=gemini_key)
                     response = client.models.generate_content(
-                        model='gemini-2.5-flash',
+                       model='gemini-3.8-flash',
+
                         contents=prompt_testo,
                     )
                     risultato_ia = response.text
