@@ -16,7 +16,10 @@ st.markdown("Dashboard interattiva per l'analisi e la generazione di segnali cry
 st.sidebar.header("⚙️ Configurazione")
 
 # Recupera le chiavi dalle variabili d'ambiente (impostate su Render) o dai campi di input
-gemini_key = os.getenv("GEMINI_API_KEY") or st.sidebar.text_input("Gemini API Key", type="password")
+gemini_key = os.getenv("GEMINI_API_KEY")
+if not gemini_key:
+    gemini_key = st.sidebar.text_input("Gemini API Key", type="password")
+
 groq_key = os.getenv("GROQ_API_KEY") or st.sidebar.text_input("Groq API Key", type="password")
 
 # Selezione della criptovaluta e del modello
