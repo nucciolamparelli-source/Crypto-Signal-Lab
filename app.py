@@ -74,8 +74,9 @@ analyze_button = st.sidebar.button("🚀 Lancia Multi-Agente Free", type="primar
 # ====================== DATA FUNCTIONS ======================
 @st.cache_data(ttl=60)
 def get_binance_price(symbol: str):
+    # Prima prova Binance
     try:
-        r = requests.get(f"https://api.binance.com/api/v3/ticker/24hr?symbol={symbol}", timeout=8)
+        r = requests.get(f"https://api.binance.com/api/v3/ticker/24hr?symbol={symbol}", timeout=10)
         r.raise_for_status()
         data = r.json()
         return {
@@ -86,7 +87,40 @@ def get_binance_price(symbol: str):
             "volume": float(data["quoteVolume"]),
         }
     except Exception:
+        pass
+
+    # Fallback su CoinGecko (gratuito)
+    try:
+        # Mappa simbolo Binance → id CoinGecko
+        coingecko_map = {
+            "BTCUSDT": "bitcoin",
+            "ETHUSDT": "ethereum",
+            "SOLUSDT": "solana",
+            "BNBUSDT": "binancecoin",
+            "XRPUSDT": "ripple",
+            "ADAUSDT": "cardano",
+            "DOGEUSDT": "dogecoin",
+            "AVAXUSDT": "avalanche-2",
+        }
+        coin_id = coingecko_map.get(symbol)
+        if not coin_id:
+            return None
+
+        url = f"https://api.coingecko.com/api/v3/coins/{coin_id}"
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        market = data["market_data"]
+        return {
+            "price": float(market["current_price"]["usd"]),
+            "change_24h": float(market["price_change_percentage_24h"] or 0),
+            "high_24h": float(market["high_24h"]["usd"]),
+            "low_24h": float(market["low_24h"]["usd"]),
+            "volume": float(market["total_volume"]["usd"]),
+        }
+    except Exception:
         return None
+        
 
 @st.cache_data(ttl=300)
 def get_defillama_tvl(chain_name: str):
