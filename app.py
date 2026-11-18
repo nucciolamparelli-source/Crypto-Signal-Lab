@@ -253,7 +253,7 @@ def call_gemini(system: str, user_prompt: str, api_key: str) -> str:
         client = genai.Client(api_key=api_key)
         full_prompt = f"{system}\n\n{user_prompt}"
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-3.8-flash",
             contents=full_prompt,
         )
         return response.text
