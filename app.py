@@ -265,7 +265,7 @@ def call_groq(system: str, user_prompt: str, api_key: str) -> str:
         from openai import OpenAI
         client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3.8-27b",
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user_prompt}
